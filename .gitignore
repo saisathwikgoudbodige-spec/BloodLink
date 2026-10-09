@@ -1,0 +1,48 @@
+# ============================================================
+# BloodLink — Root .gitignore
+# ============================================================
+
+# === Secrets & Environment Files ===
+.env
+.env.local
+.env.production
+.env.staging
+.env.*
+!.env.example
+
+# === Build Artifacts ===
+target/
+dist/
+build/
+
+# === Node Modules ===
+node_modules/
+
+# === IDE Configuration ===
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+.project
+.classpath
+.settings/
+
+# === OS Files ===
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# === Logs ===
+logs/
+*.log
+*.log.*
+
+# === Maven Wrapper Cache ===
+!.mvn/wrapper/maven-wrapper.jar
+
+# === Test / Coverage Artifacts ===
+*.exec
+jacoco.exec
+surefire-reports/
+failsafe-reports/
