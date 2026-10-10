@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useWebSocket } from '../context/WebSocketContext';
-import { Droplet, Bell, LogOut, User as UserIcon, Shield, Activity, PlusCircle, List, Radio } from 'lucide-react';
+import { Droplet, Bell, LogOut, User as UserIcon, Shield, Activity, PlusCircle, List, Radio, Heart } from 'lucide-react';
 
 const Navbar = () => {
   const { user, isAuthenticated, role, logout } = useAuth();
