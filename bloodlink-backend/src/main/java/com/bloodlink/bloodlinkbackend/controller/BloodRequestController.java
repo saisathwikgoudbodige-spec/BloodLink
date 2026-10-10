@@ -23,7 +23,7 @@ public class BloodRequestController {
     private final MatchService matchService;
 
     @PostMapping
-    @PreAuthorize("hasRole('REQUESTER') or hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('USER', 'REQUESTER', 'ADMIN')")
     public ResponseEntity<ApiResponse<BloodRequestDto>> createRequest(
             @AuthenticationPrincipal UserDetails userDetails,
             @Valid @RequestBody CreateBloodRequestDto dto) {
@@ -41,7 +41,7 @@ public class BloodRequestController {
     }
 
     @GetMapping("/my")
-    @PreAuthorize("hasRole('REQUESTER') or hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('USER', 'REQUESTER', 'ADMIN')")
     public ResponseEntity<ApiResponse<List<BloodRequestDto>>> getMyRequests(
             @AuthenticationPrincipal UserDetails userDetails) {
         List<BloodRequestDto> list = bloodRequestService.getMyRequests(userDetails.getUsername());

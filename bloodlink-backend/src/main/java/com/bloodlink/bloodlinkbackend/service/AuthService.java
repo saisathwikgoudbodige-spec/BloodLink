@@ -6,7 +6,9 @@ import com.bloodlink.bloodlinkbackend.dto.RegisterRequest;
 import com.bloodlink.bloodlinkbackend.dto.UserDto;
 import com.bloodlink.bloodlinkbackend.entity.DonorProfile;
 import com.bloodlink.bloodlinkbackend.entity.User;
+import com.bloodlink.bloodlinkbackend.enums.ApprovalStatus;
 import com.bloodlink.bloodlinkbackend.enums.AvailabilityStatus;
+import com.bloodlink.bloodlinkbackend.enums.NotificationType;
 import com.bloodlink.bloodlinkbackend.enums.Role;
 import com.bloodlink.bloodlinkbackend.exception.BadRequestException;
 import com.bloodlink.bloodlinkbackend.exception.ResourceNotFoundException;
@@ -37,15 +39,21 @@ public class AuthService {
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
     private final CustomUserDetailsService userDetailsService;
+    private final NotificationService notificationService;
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
+        Role assignedRole = request.getRole() != null ? request.getRole() : Role.USER;
+        if (assignedRole == Role.ADMIN) {
+            throw new BadRequestException("Public self-assignment of the ADMIN role is strictly prohibited.");
+        }
+
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new BadRequestException("An account with this email already exists: " + request.getEmail());
         }
 
         if (request.getRole() == Role.DONOR && request.getBloodGroup() == null) {
-            throw new BadRequestException("Blood group is required for Donor registration");
+            throw new BadRequestException("Blood group is required for explicit Donor registration");
         }
 
         User user = User.builder()
@@ -53,15 +61,17 @@ public class AuthService {
                 .email(request.getEmail().trim().toLowerCase())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .phone(request.getPhone() != null ? request.getPhone().trim() : null)
-                .role(request.getRole())
+                .role(assignedRole)
                 .active(true)
+                .approvalStatus(ApprovalStatus.PENDING_APPROVAL)
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
                 .build();
 
         User savedUser = userRepository.save(user);
 
-        if (request.getRole() == Role.DONOR) {
+        // If donor details are provided during registration, initialize the donor profile
+        if (request.getBloodGroup() != null) {
             DonorProfile profile = DonorProfile.builder()
                     .user(savedUser)
                     .bloodGroup(request.getBloodGroup())
@@ -77,29 +87,53 @@ public class AuthService {
             savedUser.setDonorProfile(profile);
         }
 
-        UserDetails userDetails = userDetailsService.loadUserByUsername(savedUser.getEmail());
-        String token = jwtService.generateToken(userDetails);
+        // Notify system administrators about new registration awaiting approval
+        try {
+            notificationService.notifyAdmins(
+                    null,
+                    "New User Registration Pending Review",
+                    String.format("A new %s account has registered: %s (%s). Please review and approve/reject.",
+                            savedUser.getRole(), savedUser.getName(), savedUser.getEmail()),
+                    NotificationType.USER_REGISTRATION
+            );
+        } catch (Exception ex) {
+            log.warn("Failed to dispatch admin notification for new user registration #{}: {}", savedUser.getId(), ex.getMessage());
+        }
 
+        log.info("User #{} ({}) registered successfully with status PENDING_APPROVAL", savedUser.getId(), savedUser.getEmail());
+
+        // Do not issue a JWT token for pending accounts
         return AuthResponse.builder()
-                .token(token)
+                .token(null)
                 .type("Bearer")
                 .user(EntityMapper.toUserDto(savedUser))
+                .message("Registration submitted successfully. Your account is awaiting administrator approval before you can log in.")
                 .build();
     }
 
     public AuthResponse login(LoginRequest request) {
         String email = request.getEmail().trim().toLowerCase();
 
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(email, request.getPassword())
-        );
-
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + email));
+
+        // Check approval status before authentication to provide clear feedback
+        if (user.getApprovalStatus() == ApprovalStatus.PENDING_APPROVAL) {
+            throw new BadRequestException("Your account is pending administrator approval. Please wait for an administrator to review your registration.");
+        }
+
+        if (user.getApprovalStatus() == ApprovalStatus.REJECTED) {
+            String reason = user.getRejectionReason() != null ? ": " + user.getRejectionReason() : ".";
+            throw new BadRequestException("Your account registration was rejected by an administrator" + reason);
+        }
 
         if (!user.isActive()) {
             throw new BadRequestException("This account has been deactivated. Please contact an administrator.");
         }
+
+        authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(email, request.getPassword())
+        );
 
         UserDetails userDetails = userDetailsService.loadUserByUsername(email);
         String token = jwtService.generateToken(userDetails);
@@ -108,6 +142,7 @@ public class AuthService {
                 .token(token)
                 .type("Bearer")
                 .user(EntityMapper.toUserDto(user))
+                .message("Login successful")
                 .build();
     }
 

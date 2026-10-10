@@ -126,6 +126,23 @@ const DonorDashboard = () => {
         </div>
       </div>
 
+      {/* Unconfigured Donor Profile Warning Banner */}
+      {!data?.profile && (
+        <div style={{ background: '#fef3c7', border: '1px solid #fde68a', borderRadius: '12px', padding: '1.25rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+          <div>
+            <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#92400e', display: 'flex', alignItems: 'center', gap: '6px', margin: 0 }}>
+              <Heart size={18} color="#dc2626" /> Donor Profile Not Yet Completed
+            </h3>
+            <p style={{ fontSize: '0.875rem', color: '#78350f', margin: '4px 0 0 0' }}>
+              You can submit emergency requests anytime. To also participate as an eligible volunteer blood donor and receive match alerts, complete your blood group and city.
+            </p>
+          </div>
+          <Link to="/donor/profile" className="btn btn-primary" style={{ padding: '8px 18px', fontSize: '0.85rem' }}>
+            Complete Donor Profile
+          </Link>
+        </div>
+      )}
+
       {error && (
         <div style={{ background: '#fef2f2', border: '1px solid #fecaca', padding: '12px 16px', borderRadius: '8px', color: '#b91c1c' }}>
           {error}

@@ -22,14 +22,14 @@ public class MatchController {
     private final MatchService matchService;
 
     @GetMapping("/my")
-    @PreAuthorize("hasRole('DONOR')")
+    @PreAuthorize("hasAnyRole('USER', 'DONOR', 'ADMIN')")
     public ResponseEntity<ApiResponse<List<MatchDto>>> getMyMatches(@AuthenticationPrincipal UserDetails userDetails) {
         List<MatchDto> matches = matchService.getMyMatches(userDetails.getUsername());
         return ResponseEntity.ok(ApiResponse.ok(matches));
     }
 
     @PatchMapping("/{id}/respond")
-    @PreAuthorize("hasRole('DONOR')")
+    @PreAuthorize("hasAnyRole('USER', 'DONOR', 'ADMIN')")
     public ResponseEntity<ApiResponse<MatchDto>> respondToMatch(
             @PathVariable Long id,
             @AuthenticationPrincipal UserDetails userDetails,

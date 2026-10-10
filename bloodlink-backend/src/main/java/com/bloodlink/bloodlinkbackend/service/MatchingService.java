@@ -85,8 +85,8 @@ public class MatchingService {
                 continue;
             }
 
-            // Inactive accounts cannot participate
-            if (donor.getUser() != null && !donor.getUser().isActive()) {
+            // Inactive or unapproved accounts cannot participate
+            if (donor.getUser() != null && (!donor.getUser().isActive() || donor.getUser().getApprovalStatus() != com.bloodlink.bloodlinkbackend.enums.ApprovalStatus.APPROVED)) {
                 continue;
             }
 
@@ -128,9 +128,9 @@ public class MatchingService {
             Match savedMatch = matchRepository.save(match);
             createdMatches.add(savedMatch);
 
-            // Notify potential donor
-            String title = "Potential Match: " + request.getBloodGroup().getLabel() + " Request";
-            String distanceStr = candidate.getDistanceKm() != null ? " (~" + candidate.getDistanceKm() + " km away)" : "";
+            // Notify potential donor with neutral wording
+            String title = "Potential Blood Requirement Match: " + request.getBloodGroup().getLabel() + " Request";
+            String distanceStr = candidate.getDistanceKm() != null ? String.format(" (~%.1f km away)", candidate.getDistanceKm()) : "";
             String message = String.format(
                     "A patient at %s in %s has an emergency requirement for %d unit(s) of %s blood%s. Urgency: %s. Please review and respond if available.",
                     request.getHospitalName(),

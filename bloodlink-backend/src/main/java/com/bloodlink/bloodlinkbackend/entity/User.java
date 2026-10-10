@@ -1,5 +1,6 @@
 package com.bloodlink.bloodlinkbackend.entity;
 
+import com.bloodlink.bloodlinkbackend.enums.ApprovalStatus;
 import com.bloodlink.bloodlinkbackend.enums.Role;
 import jakarta.persistence.*;
 import lombok.*;
@@ -40,6 +41,21 @@ public class User {
     @Column(nullable = false)
     @Builder.Default
     private boolean active = true;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "approval_status", nullable = false)
+    @Builder.Default
+    private ApprovalStatus approvalStatus = ApprovalStatus.APPROVED;
+
+    @Column(name = "rejection_reason")
+    private String rejectionReason;
+
+    @Column(name = "approved_at")
+    private LocalDateTime approvedAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "approved_by_id")
+    private User approvedBy;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

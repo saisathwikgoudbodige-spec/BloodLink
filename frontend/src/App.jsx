@@ -45,8 +45,8 @@ function App() {
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
 
-              {/* Requester Routes */}
-              <Route element={<ProtectedRoute allowedRoles={['REQUESTER', 'ADMIN']} />}>
+              {/* Requester Routes - accessible to all approved users */}
+              <Route element={<ProtectedRoute allowedRoles={['USER', 'REQUESTER', 'DONOR']} />}>
                 <Route path="/requester/dashboard" element={<RequesterDashboard />} />
                 <Route path="/requester/create-request" element={<CreateBloodRequestPage />} />
                 <Route path="/requester/requests" element={<RequesterRequestsPage />} />
@@ -55,8 +55,8 @@ function App() {
                 <Route path="/requester/profile" element={<RequesterProfilePage />} />
               </Route>
 
-              {/* Donor Routes */}
-              <Route element={<ProtectedRoute allowedRoles={['DONOR', 'ADMIN']} />}>
+              {/* Donor Routes - accessible to all approved users */}
+              <Route element={<ProtectedRoute allowedRoles={['USER', 'REQUESTER', 'DONOR']} />}>
                 <Route path="/donor/dashboard" element={<DonorDashboard />} />
                 <Route path="/donor/matches" element={<DonorMatchesPage />} />
                 <Route path="/donor/matches/:id" element={<DonorMatchesPage />} />

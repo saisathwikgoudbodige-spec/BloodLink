@@ -21,7 +21,7 @@ public interface DonorProfileRepository extends JpaRepository<DonorProfile, Long
 
     List<DonorProfile> findByAvailabilityStatus(AvailabilityStatus status);
 
-    @Query("SELECT d FROM DonorProfile d WHERE d.bloodGroup IN :bloodGroups AND d.availabilityStatus = :status AND d.user.active = true")
+    @Query("SELECT d FROM DonorProfile d WHERE d.bloodGroup IN :bloodGroups AND d.availabilityStatus = :status AND d.user.active = true AND d.user.approvalStatus = com.bloodlink.bloodlinkbackend.enums.ApprovalStatus.APPROVED")
     List<DonorProfile> findCompatibleAvailableDonors(
             @Param("bloodGroups") Collection<BloodGroup> bloodGroups,
             @Param("status") AvailabilityStatus status

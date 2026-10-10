@@ -17,8 +17,14 @@ import java.time.LocalDateTime;
 @Slf4j
 public class DataInitializer implements CommandLineRunner {
 
-    @Value("${app.seed.demo-data:true}")
+    @Value("${app.seed.demo-data:false}")
     private boolean seedDemoData;
+
+    @Value("${app.admin.initial-email:${ADMIN_EMAIL:}}")
+    private String initialAdminEmail;
+
+    @Value("${app.admin.initial-password:${ADMIN_PASSWORD:}}")
+    private String initialAdminPassword;
 
     private final UserRepository userRepository;
     private final DonorProfileRepository donorProfileRepository;
@@ -30,10 +36,33 @@ public class DataInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
+        // Feature A4: Secure administrator provisioning via environment variables
+        if (userRepository.findByRole(Role.ADMIN).isEmpty()) {
+            if (initialAdminEmail != null && !initialAdminEmail.isBlank() &&
+                    initialAdminPassword != null && !initialAdminPassword.isBlank()) {
+                User admin = User.builder()
+                        .name("System Administrator")
+                        .email(initialAdminEmail.trim().toLowerCase())
+                        .password(passwordEncoder.encode(initialAdminPassword))
+                        .phone("+91-0000000000")
+                        .role(Role.ADMIN)
+                        .active(true)
+                        .approvalStatus(ApprovalStatus.APPROVED)
+                        .createdAt(LocalDateTime.now())
+                        .updatedAt(LocalDateTime.now())
+                        .build();
+                userRepository.save(admin);
+                log.info("Secure initial administrator provisioned from environment configuration for: {}", admin.getEmail());
+            } else if (!seedDemoData) {
+                log.info("Notice: No administrator account exists yet and ADMIN_EMAIL / ADMIN_PASSWORD are not set. Configure ADMIN_EMAIL and ADMIN_PASSWORD in environment variables to provision.");
+            }
+        }
+
         if (!seedDemoData) {
-            log.info("Demo data seeding is disabled (SEED_DEMO_DATA=false). Skipping.");
+            log.info("Demo data seeding is disabled (SEED_DEMO_DATA=false). Skipping demo account creation.");
             return;
         }
+
         try {
             // Seed Admin: admin@bloodlink.local
             seedAdminIfNotExists("System Admin", "admin@bloodlink.local", "Admin123!", "+91-9876543210");
@@ -85,6 +114,7 @@ public class DataInitializer implements CommandLineRunner {
                     .phone(phone)
                     .role(Role.ADMIN)
                     .active(true)
+                    .approvalStatus(ApprovalStatus.APPROVED)
                     .createdAt(LocalDateTime.now().minusDays(30))
                     .updatedAt(LocalDateTime.now())
                     .build();
@@ -102,6 +132,7 @@ public class DataInitializer implements CommandLineRunner {
                     .phone(phone)
                     .role(Role.REQUESTER)
                     .active(true)
+                    .approvalStatus(ApprovalStatus.APPROVED)
                     .createdAt(LocalDateTime.now().minusDays(15))
                     .updatedAt(LocalDateTime.now())
                     .build();
@@ -123,6 +154,7 @@ public class DataInitializer implements CommandLineRunner {
                     .phone(phone)
                     .role(Role.DONOR)
                     .active(true)
+                    .approvalStatus(ApprovalStatus.APPROVED)
                     .createdAt(LocalDateTime.now().minusDays(20))
                     .updatedAt(LocalDateTime.now())
                     .build();
@@ -179,44 +211,41 @@ public class DataInitializer implements CommandLineRunner {
                 .reason("Blood units arranged and verified at hospital")
                 .build());
 
+        Match fulfilledMatch = Match.builder()
+                .request(savedFulfilled)
+                .donor(demoDonor)
+                .distanceKm(3.2)
+                .responseStatus(MatchStatus.ACCEPTED)
+                .notifiedAt(now.minusDays(3))
+                .respondedAt(now.minusDays(2))
+                .createdAt(now.minusDays(3))
+                .build();
+        matchRepository.save(fulfilledMatch);
+
         // 2. Expired historical request
         BloodRequest expiredRequest = BloodRequest.builder()
                 .requester(requester)
-                .bloodGroup(BloodGroup.B_POSITIVE)
+                .bloodGroup(BloodGroup.AB_NEGATIVE)
                 .unitsRequired(1)
-                .hospitalName("Apollo Emergency Center")
-                .city("Hyderabad")
-                .latitude(17.4150)
-                .longitude(78.4350)
+                .hospitalName("Apex Emergency Care")
+                .city("Secunderabad")
+                .latitude(17.4410)
+                .longitude(78.5010)
                 .urgency(Urgency.NORMAL)
-                .expiresAt(now.minusDays(5))
+                .expiresAt(now.minusDays(1))
                 .status(RequestStatus.EXPIRED)
-                .createdAt(now.minusDays(6))
-                .updatedAt(now.minusDays(5))
+                .createdAt(now.minusDays(2))
+                .updatedAt(now.minusDays(1))
                 .build();
         bloodRequestRepository.save(expiredRequest);
 
-        // 3. Initial welcome notification for requester and donor
-        notificationRepository.save(Notification.builder()
-                .user(requester)
-                .requestId(savedFulfilled.getId())
-                .title("Welcome to BloodLink")
-                .message("Your account is ready. Create emergency blood requests whenever urgent matching is required.")
-                .type(NotificationType.REQUEST_UPDATED)
-                .isRead(true)
-                .createdAt(now.minusDays(3))
+        requestHistoryRepository.save(RequestHistory.builder()
+                .request(expiredRequest)
+                .oldStatus(RequestStatus.OPEN)
+                .newStatus(RequestStatus.EXPIRED)
+                .changedBy(null)
+                .changedAt(now.minusDays(1))
+                .reason("Request validity expired automatically after timeout")
                 .build());
-
-        if (demoDonor != null && demoDonor.getUser() != null) {
-            notificationRepository.save(Notification.builder()
-                    .user(demoDonor.getUser())
-                    .requestId(savedFulfilled.getId())
-                    .title("Welcome to BloodLink Donor Network")
-                    .message("Thank you for registering as a volunteer donor. You will receive real-time alerts when compatible emergencies arise.")
-                    .type(NotificationType.NEW_MATCH)
-                    .isRead(false)
-                    .createdAt(now.minusHours(4))
-                    .build());
-        }
     }
 }

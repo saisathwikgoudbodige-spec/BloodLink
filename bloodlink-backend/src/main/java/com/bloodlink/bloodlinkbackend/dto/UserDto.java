@@ -1,5 +1,6 @@
 package com.bloodlink.bloodlinkbackend.dto;
 
+import com.bloodlink.bloodlinkbackend.enums.ApprovalStatus;
 import com.bloodlink.bloodlinkbackend.enums.Role;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -20,6 +21,10 @@ public class UserDto {
     private String phone;
     private Role role;
     private boolean active;
+    private ApprovalStatus approvalStatus;
+    private String rejectionReason;
+    private LocalDateTime approvedAt;
+    private String approvedByEmail;
     private LocalDateTime createdAt;
     private DonorProfileDto donorProfile;
 }

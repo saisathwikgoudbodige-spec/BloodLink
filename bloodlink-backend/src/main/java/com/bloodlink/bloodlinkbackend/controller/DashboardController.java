@@ -22,7 +22,7 @@ public class DashboardController {
     private final DashboardService dashboardService;
 
     @GetMapping("/requester")
-    @PreAuthorize("hasRole('REQUESTER') or hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('USER', 'REQUESTER', 'ADMIN')")
     public ResponseEntity<ApiResponse<RequesterDashboardDto>> getRequesterDashboard(
             @AuthenticationPrincipal UserDetails userDetails) {
         RequesterDashboardDto dto = dashboardService.getRequesterDashboard(userDetails.getUsername());
@@ -30,7 +30,7 @@ public class DashboardController {
     }
 
     @GetMapping("/donor")
-    @PreAuthorize("hasRole('DONOR') or hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('USER', 'DONOR', 'ADMIN')")
     public ResponseEntity<ApiResponse<DonorDashboardDto>> getDonorDashboard(
             @AuthenticationPrincipal UserDetails userDetails) {
         DonorDashboardDto dto = dashboardService.getDonorDashboard(userDetails.getUsername());

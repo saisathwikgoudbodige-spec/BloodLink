@@ -28,6 +28,9 @@ public interface BloodRequestRepository extends JpaRepository<BloodRequest, Long
     @Query("SELECT r FROM BloodRequest r WHERE r.status IN ('OPEN', 'MATCHING', 'RESPONDED') AND r.expiresAt > :now ORDER BY r.createdAt DESC")
     List<BloodRequest> findActiveRequests(@Param("now") LocalDateTime now);
 
+    @Query("SELECT COUNT(r) FROM BloodRequest r WHERE r.status IN ('OPEN', 'MATCHING', 'RESPONDED') AND r.expiresAt > :now")
+    long countActiveRequests(@Param("now") LocalDateTime now);
+
     @Query("SELECT r FROM BloodRequest r WHERE r.status IN ('OPEN', 'MATCHING') AND r.bloodGroup IN :bloodGroups AND r.expiresAt > :now ORDER BY r.createdAt DESC")
     List<BloodRequest> findMatchingActiveRequests(
             @Param("bloodGroups") Collection<BloodGroup> bloodGroups,

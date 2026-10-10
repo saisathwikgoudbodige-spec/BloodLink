@@ -21,12 +21,17 @@ const ProtectedRoute = ({ allowedRoles = [] }) => {
     return <Navigate to="/login" replace />;
   }
 
-  if (allowedRoles.length > 0 && !allowedRoles.includes(role)) {
-    // If logged in as donor trying to access requester page or vice versa
-    if (role === 'DONOR') return <Navigate to="/donor/dashboard" replace />;
-    if (role === 'REQUESTER') return <Navigate to="/requester/dashboard" replace />;
-    if (role === 'ADMIN') return <Navigate to="/admin/dashboard" replace />;
-    return <Navigate to="/" replace />;
+  if (allowedRoles.length > 0) {
+    const isOrdinaryUser = role === 'USER' || role === 'REQUESTER' || role === 'DONOR';
+    const isAllowed =
+      allowedRoles.includes(role) ||
+      (isOrdinaryUser && (allowedRoles.includes('USER') || allowedRoles.includes('REQUESTER') || allowedRoles.includes('DONOR'))) ||
+      (role === 'ADMIN'); // Admin can view all portals
+
+    if (!isAllowed) {
+      if (role === 'ADMIN') return <Navigate to="/admin/dashboard" replace />;
+      return <Navigate to="/requester/dashboard" replace />;
+    }
   }
 
   return <Outlet />;

@@ -82,6 +82,24 @@ public class BloodRequestService {
         // Record initial status history
         recordHistory(savedRequest, null, RequestStatus.OPEN, requester, "Blood request initiated");
 
+        // Feature B1: Notify system administrators about the new blood requirement
+        try {
+            notificationService.notifyAdmins(
+                    savedRequest.getId(),
+                    String.format("New Blood Request: %s (%s)", savedRequest.getBloodGroup().getLabel(), savedRequest.getUrgency().name()),
+                    String.format("New emergency blood requirement #%d created for %d unit(s) of %s at %s, %s. Urgency: %s.",
+                            savedRequest.getId(),
+                            savedRequest.getUnitsRequired(),
+                            savedRequest.getBloodGroup().getLabel(),
+                            savedRequest.getHospitalName(),
+                            savedRequest.getCity(),
+                            savedRequest.getUrgency().name()),
+                    NotificationType.NEW_BLOOD_REQUEST
+            );
+        } catch (Exception ex) {
+            log.warn("Failed to notify admins of new blood request #{}: {}", savedRequest.getId(), ex.getMessage());
+        }
+
         // Run matching engine to identify and notify compatible donors
         List<Match> matches = matchingService.matchDonorsForRequest(savedRequest);
 

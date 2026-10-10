@@ -24,14 +24,14 @@ public class DonorController {
     private final DonorService donorService;
 
     @GetMapping("/profile")
-    @PreAuthorize("hasRole('DONOR') or hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('USER', 'DONOR', 'ADMIN')")
     public ResponseEntity<ApiResponse<DonorProfileDto>> getProfile(@AuthenticationPrincipal UserDetails userDetails) {
         DonorProfileDto profile = donorService.getProfileByEmail(userDetails.getUsername());
         return ResponseEntity.ok(ApiResponse.ok(profile));
     }
 
     @PutMapping("/profile")
-    @PreAuthorize("hasRole('DONOR')")
+    @PreAuthorize("hasAnyRole('USER', 'DONOR', 'ADMIN')")
     public ResponseEntity<ApiResponse<DonorProfileDto>> updateProfile(
             @AuthenticationPrincipal UserDetails userDetails,
             @Valid @RequestBody DonorProfileUpdateRequest request) {
@@ -40,7 +40,7 @@ public class DonorController {
     }
 
     @PatchMapping("/availability")
-    @PreAuthorize("hasRole('DONOR')")
+    @PreAuthorize("hasAnyRole('USER', 'DONOR', 'ADMIN')")
     public ResponseEntity<ApiResponse<DonorProfileDto>> updateAvailability(
             @AuthenticationPrincipal UserDetails userDetails,
             @Valid @RequestBody DonorAvailabilityRequest request) {
@@ -49,7 +49,7 @@ public class DonorController {
     }
 
     @GetMapping("/matches")
-    @PreAuthorize("hasRole('DONOR')")
+    @PreAuthorize("hasAnyRole('USER', 'DONOR', 'ADMIN')")
     public ResponseEntity<ApiResponse<List<MatchDto>>> getMyMatches(@AuthenticationPrincipal UserDetails userDetails) {
         List<MatchDto> matches = donorService.getDonorMatches(userDetails.getUsername());
         return ResponseEntity.ok(ApiResponse.ok(matches));

@@ -31,19 +31,24 @@ const DonorProfilePage = () => {
   const fetchProfile = async () => {
     try {
       setLoading(true);
+      setError(null);
       const res = await donorService.getProfile();
-      if (res.data) {
+      if (res && res.data) {
         const p = res.data;
         setProfile(p);
-        setBloodGroup(p.bloodGroup);
+        setBloodGroup(p.bloodGroup || 'O_POSITIVE');
         setCity(p.city || '');
         setLatitude(p.latitude != null ? p.latitude : '');
         setLongitude(p.longitude != null ? p.longitude : '');
         setPhone(p.phone || '');
         setAvailability(p.availabilityStatus || 'AVAILABLE');
+      } else {
+        // User has not created donor profile yet - provide initial blank state
+        setProfile({ bloodGroup: 'O_POSITIVE', city: '', availabilityStatus: 'AVAILABLE' });
       }
     } catch (err) {
-      setError(err.message || 'Failed to load profile');
+      // 404 simply means no donor profile configured yet
+      setProfile({ bloodGroup: 'O_POSITIVE', city: '', availabilityStatus: 'AVAILABLE' });
     } finally {
       setLoading(false);
     }

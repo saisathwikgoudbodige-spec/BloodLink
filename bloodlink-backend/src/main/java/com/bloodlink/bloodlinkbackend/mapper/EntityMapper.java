@@ -21,6 +21,10 @@ public class EntityMapper {
                 .phone(user.getPhone())
                 .role(user.getRole())
                 .active(user.isActive())
+                .approvalStatus(user.getApprovalStatus())
+                .rejectionReason(user.getRejectionReason())
+                .approvedAt(user.getApprovedAt())
+                .approvedByEmail(user.getApprovedBy() != null ? user.getApprovedBy().getEmail() : null)
                 .createdAt(user.getCreatedAt())
                 .donorProfile(donorProfileDto)
                 .build();

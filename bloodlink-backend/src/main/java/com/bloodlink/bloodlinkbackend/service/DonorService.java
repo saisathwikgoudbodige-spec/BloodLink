@@ -32,9 +32,8 @@ public class DonorService {
 
     @Transactional(readOnly = true)
     public DonorProfileDto getProfileByEmail(String email) {
-        DonorProfile profile = donorProfileRepository.findByUserEmail(email.toLowerCase())
-                .orElseThrow(() -> new ResourceNotFoundException("Donor profile not found for user: " + email));
-        return EntityMapper.toDonorProfileDto(profile);
+        DonorProfile profile = donorProfileRepository.findByUserEmail(email.toLowerCase()).orElse(null);
+        return profile != null ? EntityMapper.toDonorProfileDto(profile) : null;
     }
 
     @Transactional
@@ -62,7 +61,8 @@ public class DonorService {
     @Transactional
     public DonorProfileDto updateAvailability(String email, DonorAvailabilityRequest request) {
         DonorProfile profile = donorProfileRepository.findByUserEmail(email.toLowerCase())
-                .orElseThrow(() -> new ResourceNotFoundException("Donor profile not found for user: " + email));
+                .orElseThrow(() -> new com.bloodlink.bloodlinkbackend.exception.BadRequestException(
+                        "Please complete your donor profile first before changing availability."));
 
         profile.setAvailabilityStatus(request.getAvailabilityStatus());
         profile.setUpdatedAt(LocalDateTime.now());
@@ -74,8 +74,10 @@ public class DonorService {
 
     @Transactional(readOnly = true)
     public List<MatchDto> getDonorMatches(String email) {
-        DonorProfile profile = donorProfileRepository.findByUserEmail(email.toLowerCase())
-                .orElseThrow(() -> new ResourceNotFoundException("Donor profile not found for user: " + email));
+        DonorProfile profile = donorProfileRepository.findByUserEmail(email.toLowerCase()).orElse(null);
+        if (profile == null) {
+            return java.util.Collections.emptyList();
+        }
 
         return matchRepository.findByDonorIdOrderByCreatedAtDesc(profile.getId())
                 .stream()

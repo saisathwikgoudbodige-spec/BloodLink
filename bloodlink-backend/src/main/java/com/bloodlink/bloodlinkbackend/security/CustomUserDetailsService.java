@@ -26,10 +26,21 @@ public class CustomUserDetailsService implements UserDetailsService {
             throw new UsernameNotFoundException("User account is inactive: " + email);
         }
 
+        java.util.List<SimpleGrantedAuthority> authorities;
+        if (user.getRole() == com.bloodlink.bloodlinkbackend.enums.Role.ADMIN) {
+            authorities = java.util.Collections.singletonList(new SimpleGrantedAuthority("ROLE_ADMIN"));
+        } else {
+            authorities = java.util.Arrays.asList(
+                    new SimpleGrantedAuthority("ROLE_USER"),
+                    new SimpleGrantedAuthority("ROLE_REQUESTER"),
+                    new SimpleGrantedAuthority("ROLE_DONOR")
+            );
+        }
+
         return new org.springframework.security.core.userdetails.User(
                 user.getEmail(),
                 user.getPassword(),
-                Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()))
+                authorities
         );
     }
 }

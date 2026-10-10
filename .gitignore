@@ -46,3 +46,7 @@ logs/
 jacoco.exec
 surefire-reports/
 failsafe-reports/
+
+# Compiled Java files and generated test output
+*.class
+target_test-classes/

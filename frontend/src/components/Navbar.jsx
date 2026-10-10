@@ -38,34 +38,79 @@ const Navbar = () => {
             </>
           )}
 
-          {isAuthenticated && role === 'REQUESTER' && (
-            <>
-              <Link to="/requester/dashboard" className={`nav-link ${isActive('/requester/dashboard') ? 'active' : ''}`}>Dashboard</Link>
-              <Link to="/requester/create-request" className={`nav-link ${isActive('/requester/create-request') ? 'active' : ''}`}>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                  <PlusCircle size={15} /> Create Request
-                </span>
-              </Link>
-              <Link to="/requester/requests" className={`nav-link ${isActive('/requester/requests') ? 'active' : ''}`}>My Requests</Link>
-            </>
-          )}
+          {isAuthenticated && role !== 'ADMIN' && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {/* Dual Portal Switcher Tabs */}
+              <div style={{ display: 'inline-flex', background: '#f1f5f9', padding: '3px', borderRadius: '8px', border: '1px solid #e2e8f0', marginRight: '6px' }}>
+                <Link
+                  to="/requester/dashboard"
+                  style={{
+                    padding: '5px 12px',
+                    borderRadius: '6px',
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    textDecoration: 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    background: location.pathname.startsWith('/requester') ? '#ffffff' : 'transparent',
+                    color: location.pathname.startsWith('/requester') ? '#dc2626' : '#64748b',
+                    boxShadow: location.pathname.startsWith('/requester') ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <Droplet size={13} fill={location.pathname.startsWith('/requester') ? '#dc2626' : 'none'} /> Requester Portal
+                </Link>
+                <Link
+                  to="/donor/dashboard"
+                  style={{
+                    padding: '5px 12px',
+                    borderRadius: '6px',
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    textDecoration: 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    background: location.pathname.startsWith('/donor') ? '#ffffff' : 'transparent',
+                    color: location.pathname.startsWith('/donor') ? '#16a34a' : '#64748b',
+                    boxShadow: location.pathname.startsWith('/donor') ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <Heart size={13} fill={location.pathname.startsWith('/donor') ? '#16a34a' : 'none'} /> Donor Portal
+                </Link>
+              </div>
 
-          {isAuthenticated && role === 'DONOR' && (
-            <>
-              <Link to="/donor/dashboard" className={`nav-link ${isActive('/donor/dashboard') ? 'active' : ''}`}>Dashboard</Link>
-              <Link to="/donor/matches" className={`nav-link ${isActive('/donor/matches') ? 'active' : ''}`}>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                  <Radio size={15} /> Potential Matches
-                </span>
-              </Link>
-              <Link to="/donor/profile" className={`nav-link ${isActive('/donor/profile') ? 'active' : ''}`}>Donor Profile</Link>
-            </>
+              {/* Portal-specific sublinks */}
+              {location.pathname.startsWith('/requester') ? (
+                <>
+                  <Link to="/requester/dashboard" className={`nav-link ${isActive('/requester/dashboard') ? 'active' : ''}`}>Dashboard</Link>
+                  <Link to="/requester/create-request" className={`nav-link ${isActive('/requester/create-request') ? 'active' : ''}`}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      <PlusCircle size={15} /> Create Request
+                    </span>
+                  </Link>
+                  <Link to="/requester/requests" className={`nav-link ${isActive('/requester/requests') ? 'active' : ''}`}>My Requests</Link>
+                </>
+              ) : (
+                <>
+                  <Link to="/donor/dashboard" className={`nav-link ${isActive('/donor/dashboard') ? 'active' : ''}`}>Dashboard</Link>
+                  <Link to="/donor/matches" className={`nav-link ${isActive('/donor/matches') ? 'active' : ''}`}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      <Radio size={15} /> Potential Matches
+                    </span>
+                  </Link>
+                  <Link to="/donor/profile" className={`nav-link ${isActive('/donor/profile') ? 'active' : ''}`}>Donor Profile</Link>
+                </>
+              )}
+            </div>
           )}
 
           {isAuthenticated && role === 'ADMIN' && (
             <>
               <Link to="/admin/dashboard" className={`nav-link ${isActive('/admin/dashboard') ? 'active' : ''}`}>Admin Dashboard</Link>
-              <Link to="/admin/users" className={`nav-link ${isActive('/admin/users') ? 'active' : ''}`}>Users</Link>
+              <Link to="/admin/users" className={`nav-link ${isActive('/admin/users') ? 'active' : ''}`}>Users & Approvals</Link>
               <Link to="/admin/requests" className={`nav-link ${isActive('/admin/requests') ? 'active' : ''}`}>Requests Monitor</Link>
               <Link to="/admin/duplicates" className={`nav-link ${isActive('/admin/duplicates') ? 'active' : ''}`}>Duplicates Review</Link>
               <Link to="/admin/audit-logs" className={`nav-link ${isActive('/admin/audit-logs') ? 'active' : ''}`}>Audit Logs</Link>
@@ -92,7 +137,7 @@ const Navbar = () => {
           {/* Notifications button */}
           {isAuthenticated && (
             <Link
-              to={role === 'REQUESTER' ? '/requester/notifications' : role === 'DONOR' ? '/donor/notifications' : '/admin/dashboard'}
+              to={role === 'ADMIN' ? '/admin/dashboard' : '/requester/notifications'}
               className="btn btn-secondary btn-sm"
               style={{ position: 'relative', padding: '8px 10px', borderRadius: '8px' }}
               title="Notifications"
@@ -129,7 +174,7 @@ const Navbar = () => {
               <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column' }}>
                 <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--primary-navy)' }}>{user?.name}</span>
                 <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-muted)' }}>
-                  {role === 'ADMIN' ? '🛡️ ADMIN' : role === 'DONOR' ? '❤️ DONOR' : '📋 REQUESTER'}
+                  {role === 'ADMIN' ? '🛡️ SYSTEM ADMIN' : '👤 MEMBER (Requester + Donor)'}
                 </span>
               </div>
               <button onClick={handleLogout} className="btn btn-secondary btn-sm" title="Sign out">

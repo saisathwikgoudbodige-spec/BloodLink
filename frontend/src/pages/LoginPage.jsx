@@ -24,11 +24,9 @@ const LoginPage = () => {
       setError(null);
       const user = await login(email, password);
 
-      // Redirect based on role
+      // Redirect: Admin goes to admin dashboard, ordinary users go to requester/donor portal
       if (user.role === 'ADMIN') {
         navigate('/admin/dashboard');
-      } else if (user.role === 'DONOR') {
-        navigate('/donor/dashboard');
       } else {
         navigate('/requester/dashboard');
       }
@@ -106,27 +104,30 @@ const LoginPage = () => {
 
         {/* 1-Click Demo Accounts Box */}
         <div style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px dashed #e2e8f0' }}>
-          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '10px' }}>
+          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '6px' }}>
             ⚡ 1-Click Demo Credentials
           </span>
+          <p style={{ fontSize: '0.75rem', color: '#94a3b8', margin: '0 0 10px 0' }}>
+            One login grants access to both Requester & Donor portals
+          </p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px' }}>
             <button
               type="button"
               className="btn btn-secondary btn-sm"
               onClick={() => fillDemo('requester@bloodlink.local', 'Requester123!')}
               style={{ fontSize: '0.75rem', padding: '6px 4px' }}
-              title="Requester Demo Account"
+              title="Approved Member (Rajesh Sharma)"
             >
-              Requester
+              Member #1
             </button>
             <button
               type="button"
               className="btn btn-secondary btn-sm"
               onClick={() => fillDemo('donor@bloodlink.local', 'Donor123!')}
               style={{ fontSize: '0.75rem', padding: '6px 4px' }}
-              title="Donor Demo Account (Hyderabad O+)"
+              title="Approved Member with O+ Donor Profile (Kiran Kumar)"
             >
-              Donor (O+)
+              Member #2 (O+)
             </button>
             <button
               type="button"

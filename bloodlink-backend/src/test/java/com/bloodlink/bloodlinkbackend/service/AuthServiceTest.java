@@ -4,10 +4,10 @@ import com.bloodlink.bloodlinkbackend.dto.AuthResponse;
 import com.bloodlink.bloodlinkbackend.dto.LoginRequest;
 import com.bloodlink.bloodlinkbackend.dto.RegisterRequest;
 import com.bloodlink.bloodlinkbackend.entity.User;
+import com.bloodlink.bloodlinkbackend.enums.ApprovalStatus;
 import com.bloodlink.bloodlinkbackend.enums.BloodGroup;
 import com.bloodlink.bloodlinkbackend.enums.Role;
 import com.bloodlink.bloodlinkbackend.exception.BadRequestException;
-import com.bloodlink.bloodlinkbackend.exception.ResourceNotFoundException;
 import com.bloodlink.bloodlinkbackend.repository.DonorProfileRepository;
 import com.bloodlink.bloodlinkbackend.repository.UserRepository;
 import com.bloodlink.bloodlinkbackend.security.CustomUserDetailsService;
@@ -51,11 +51,14 @@ class AuthServiceTest {
     @Mock
     private CustomUserDetailsService userDetailsService;
 
+    @Mock
+    private NotificationService notificationService;
+
     @InjectMocks
     private AuthService authService;
 
     @Test
-    @DisplayName("Should successfully register a requester and return JWT token")
+    @DisplayName("Should successfully register a requester in PENDING_APPROVAL status without issuing a JWT")
     void testRegisterRequesterSuccess() {
         RegisterRequest request = RegisterRequest.builder()
                 .name("New Requester")
@@ -73,17 +76,90 @@ class AuthServiceTest {
             return u;
         });
 
-        UserDetails mockUserDetails = mock(UserDetails.class);
-        when(userDetailsService.loadUserByUsername(anyString())).thenReturn(mockUserDetails);
-        when(jwtService.generateToken(mockUserDetails)).thenReturn("mock.jwt.token");
-
         AuthResponse response = authService.register(request);
 
         assertNotNull(response);
-        assertEquals("mock.jwt.token", response.getToken());
-        assertEquals("Bearer", response.getType());
-        assertEquals("newreq@test.local", response.getUser().getEmail());
-        verify(donorProfileRepository, never()).save(any());
+        assertNull(response.getToken(), "Pending user must not receive an active JWT token");
+        assertEquals(ApprovalStatus.PENDING_APPROVAL, response.getUser().getApprovalStatus());
+        assertTrue(response.getMessage().contains("awaiting administrator approval"));
+        verify(notificationService).notifyAdmins(isNull(), anyString(), anyString(), any());
+    }
+
+    @Test
+    @DisplayName("Public user cannot self-assign the ADMIN role on registration")
+    void testRegisterAdminRoleRejected() {
+        RegisterRequest request = RegisterRequest.builder()
+                .name("Hacker Admin")
+                .email("hacker@test.local")
+                .password("Password123!")
+                .role(Role.ADMIN)
+                .build();
+
+        BadRequestException ex = assertThrows(BadRequestException.class, () -> authService.register(request));
+        assertTrue(ex.getMessage().contains("ADMIN"));
+    }
+
+    @Test
+    @DisplayName("Pending approval user cannot log in")
+    void testLoginPendingUserRejected() {
+        LoginRequest loginRequest = new LoginRequest("pending@test.local", "Password123!");
+        User pendingUser = User.builder()
+                .id(1L)
+                .email("pending@test.local")
+                .active(true)
+                .approvalStatus(ApprovalStatus.PENDING_APPROVAL)
+                .build();
+
+        when(userRepository.findByEmail("pending@test.local")).thenReturn(Optional.of(pendingUser));
+
+        BadRequestException ex = assertThrows(BadRequestException.class, () -> authService.login(loginRequest));
+        assertTrue(ex.getMessage().contains("pending administrator approval"));
+        verify(authenticationManager, never()).authenticate(any());
+    }
+
+    @Test
+    @DisplayName("Rejected user cannot log in")
+    void testLoginRejectedUserDenied() {
+        LoginRequest loginRequest = new LoginRequest("rejected@test.local", "Password123!");
+        User rejectedUser = User.builder()
+                .id(2L)
+                .email("rejected@test.local")
+                .active(true)
+                .approvalStatus(ApprovalStatus.REJECTED)
+                .rejectionReason("Invalid medical document")
+                .build();
+
+        when(userRepository.findByEmail("rejected@test.local")).thenReturn(Optional.of(rejectedUser));
+
+        BadRequestException ex = assertThrows(BadRequestException.class, () -> authService.login(loginRequest));
+        assertTrue(ex.getMessage().contains("rejected"));
+        assertTrue(ex.getMessage().contains("Invalid medical document"));
+        verify(authenticationManager, never()).authenticate(any());
+    }
+
+    @Test
+    @DisplayName("Approved active user logs in successfully and receives JWT")
+    void testLoginApprovedUserSuccess() {
+        LoginRequest loginRequest = new LoginRequest("approved@test.local", "Password123!");
+        User approvedUser = User.builder()
+                .id(3L)
+                .email("approved@test.local")
+                .active(true)
+                .role(Role.REQUESTER)
+                .approvalStatus(ApprovalStatus.APPROVED)
+                .build();
+
+        when(userRepository.findByEmail("approved@test.local")).thenReturn(Optional.of(approvedUser));
+        UserDetails mockUserDetails = mock(UserDetails.class);
+        when(userDetailsService.loadUserByUsername("approved@test.local")).thenReturn(mockUserDetails);
+        when(jwtService.generateToken(mockUserDetails)).thenReturn("valid.jwt.token");
+
+        AuthResponse response = authService.login(loginRequest);
+
+        assertNotNull(response);
+        assertEquals("valid.jwt.token", response.getToken());
+        assertEquals(ApprovalStatus.APPROVED, response.getUser().getApprovalStatus());
+        verify(authenticationManager).authenticate(any());
     }
 
     @Test
@@ -121,7 +197,12 @@ class AuthServiceTest {
     @DisplayName("Login with inactive user throws BadRequestException")
     void testLoginInactiveUser() {
         LoginRequest loginRequest = new LoginRequest("inactive@test.local", "Password123!");
-        User inactiveUser = User.builder().id(1L).email("inactive@test.local").active(false).build();
+        User inactiveUser = User.builder()
+                .id(1L)
+                .email("inactive@test.local")
+                .active(false)
+                .approvalStatus(ApprovalStatus.APPROVED)
+                .build();
 
         when(userRepository.findByEmail("inactive@test.local")).thenReturn(Optional.of(inactiveUser));
 

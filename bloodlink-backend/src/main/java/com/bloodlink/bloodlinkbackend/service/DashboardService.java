@@ -76,8 +76,18 @@ public class DashboardService {
 
     @Transactional(readOnly = true)
     public DonorDashboardDto getDonorDashboard(String email) {
-        DonorProfile profile = donorProfileRepository.findByUserEmail(email.toLowerCase())
-                .orElseThrow(() -> new ResourceNotFoundException("Donor profile not found for: " + email));
+        DonorProfile profile = donorProfileRepository.findByUserEmail(email.toLowerCase()).orElse(null);
+
+        if (profile == null) {
+            return DonorDashboardDto.builder()
+                    .profile(null)
+                    .totalAlertsReceived(0L)
+                    .totalAccepted(0L)
+                    .totalDeclined(0L)
+                    .pendingMatches(0L)
+                    .recentMatches(java.util.Collections.emptyList())
+                    .build();
+        }
 
         List<Match> matches = matchRepository.findByDonorIdOrderByCreatedAtDesc(profile.getId());
 

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Droplet, AlertCircle, ArrowRight, MapPin, Heart, UserPlus } from 'lucide-react';
+import { Droplet, AlertCircle, ArrowRight, MapPin, Heart, UserPlus, CheckCircle2, ShieldAlert } from 'lucide-react';
 
 const BLOOD_GROUPS = [
   { value: 'O_POSITIVE', label: 'O+ (O Positive)' },
@@ -15,11 +15,13 @@ const BLOOD_GROUPS = [
 ];
 
 const RegisterPage = () => {
-  const [role, setRole] = useState('DONOR');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [phone, setPhone] = useState('');
+
+  // Optional Donor profile on registration
+  const [includeDonorProfile, setIncludeDonorProfile] = useState(false);
   const [bloodGroup, setBloodGroup] = useState('O_POSITIVE');
   const [city, setCity] = useState('Hyderabad');
   const [latitude, setLatitude] = useState(17.3850);
@@ -27,9 +29,9 @@ const RegisterPage = () => {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [submitted, setSubmitted] = useState(false);
 
   const { register } = useAuth();
-  const navigate = useNavigate();
 
   const handleGetLocation = () => {
     if (navigator.geolocation) {
@@ -38,7 +40,7 @@ const RegisterPage = () => {
           setLatitude(parseFloat(pos.coords.latitude.toFixed(6)));
           setLongitude(parseFloat(pos.coords.longitude.toFixed(6)));
         },
-        (err) => {
+        () => {
           alert('Unable to fetch device GPS location. Using default city coordinates.');
         }
       );
@@ -50,31 +52,56 @@ const RegisterPage = () => {
     setError(null);
 
     const payload = {
-      name,
-      email,
+      name: name.trim(),
+      email: email.trim(),
       password,
-      phone,
-      role,
-      bloodGroup: role === 'DONOR' ? bloodGroup : null,
-      city: role === 'DONOR' ? city : null,
-      latitude: role === 'DONOR' ? Number(latitude) : null,
-      longitude: role === 'DONOR' ? Number(longitude) : null,
+      phone: phone.trim(),
+      role: 'USER', // Standard unified ordinary account
+      bloodGroup: includeDonorProfile ? bloodGroup : null,
+      city: includeDonorProfile ? city.trim() : null,
+      latitude: includeDonorProfile ? Number(latitude) : null,
+      longitude: includeDonorProfile ? Number(longitude) : null,
     };
 
     try {
       setLoading(true);
-      const user = await register(payload);
-      if (user.role === 'DONOR') {
-        navigate('/donor/dashboard');
-      } else {
-        navigate('/requester/dashboard');
-      }
+      await register(payload);
+      setSubmitted(true);
     } catch (err) {
-      setError(err.message || 'Registration failed. Please check form values.');
+      // If error message indicates pending approval, that is actually the expected workflow response
+      if (err.message && err.message.toLowerCase().includes('awaiting administrator approval')) {
+        setSubmitted(true);
+      } else {
+        setError(err.message || 'Registration failed. Please check your form values.');
+      }
     } finally {
       setLoading(false);
     }
   };
+
+  if (submitted) {
+    return (
+      <div style={{ maxWidth: '520px', margin: '3rem auto' }}>
+        <div className="card" style={{ padding: '3rem 2.5rem', textAlign: 'center' }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '64px', height: '64px', background: '#dcfce7', color: '#16a34a', borderRadius: '50%', marginBottom: '1.25rem' }}>
+            <CheckCircle2 size={36} />
+          </div>
+          <h2 style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--primary-navy)', marginBottom: '0.75rem' }}>
+            Registration Submitted!
+          </h2>
+          <div style={{ background: '#fef3c7', border: '1px solid #fde68a', borderRadius: '10px', padding: '1rem', color: '#92400e', fontSize: '0.875rem', lineHeight: 1.5, marginBottom: '1.5rem', textAlign: 'left' }}>
+            <strong>Your registration has been submitted and is awaiting administrator approval.</strong>
+            <p style={{ margin: '8px 0 0 0' }}>
+              For network safety and clinical coordination integrity, an administrator must review and approve your account before you can log in. Once approved, you can sign in to access both the <strong>Requester Dashboard</strong> and <strong>Donor Dashboard</strong>.
+            </p>
+          </div>
+          <Link to="/login" className="btn btn-primary" style={{ padding: '10px 24px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+            Go to Sign In <ArrowRight size={16} />
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ maxWidth: '520px', margin: '2rem auto' }}>
@@ -87,8 +114,14 @@ const RegisterPage = () => {
             Join BloodLink Network
           </h2>
           <p style={{ fontSize: '0.875rem', color: '#64748b', marginTop: '4px' }}>
-            Register to coordinate emergency blood requirements or save lives as a donor
+            One account gives you access to both the Requester and Donor portals upon approval
           </p>
+        </div>
+
+        {/* Admin Review Notice Banner */}
+        <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '10px 14px', borderRadius: '8px', color: '#166534', fontSize: '0.8rem', display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '1.5rem' }}>
+          <ShieldAlert size={18} style={{ flexShrink: 0 }} />
+          <span>Notice: All registrations are reviewed and approved by an administrator before access is granted.</span>
         </div>
 
         {error && (
@@ -99,29 +132,6 @@ const RegisterPage = () => {
         )}
 
         <form onSubmit={handleSubmit}>
-          {/* Role Selection Tabs */}
-          <div className="form-group">
-            <label className="form-label">I am joining as a:</label>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-              <button
-                type="button"
-                className={`btn ${role === 'DONOR' ? 'btn-primary' : 'btn-secondary'}`}
-                onClick={() => setRole('DONOR')}
-                style={{ padding: '10px' }}
-              >
-                <Heart size={16} /> Volunteer Donor
-              </button>
-              <button
-                type="button"
-                className={`btn ${role === 'REQUESTER' ? 'btn-primary' : 'btn-secondary'}`}
-                onClick={() => setRole('REQUESTER')}
-                style={{ padding: '10px' }}
-              >
-                <Droplet size={16} /> Requester
-              </button>
-            </div>
-          </div>
-
           <div className="form-group">
             <label className="form-label">Full Name <span className="required">*</span></label>
             <input
@@ -171,72 +181,85 @@ const RegisterPage = () => {
             </div>
           </div>
 
-          {/* Donor Profile Specific Details */}
-          {role === 'DONOR' && (
-            <div style={{ background: '#f8fafc', padding: '1.25rem', borderRadius: '12px', border: '1px solid #e2e8f0', margin: '1rem 0' }}>
-              <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--primary-navy)', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Heart size={16} color="#dc2626" /> Donor Compatibility & Location
-              </h4>
+          {/* Optional Volunteer Donor Section */}
+          <div style={{ background: '#f8fafc', padding: '1.25rem', borderRadius: '12px', border: '1px solid #e2e8f0', margin: '1rem 0' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', userSelect: 'none' }}>
+              <input
+                type="checkbox"
+                checked={includeDonorProfile}
+                onChange={(e) => setIncludeDonorProfile(e.target.checked)}
+                style={{ width: '18px', height: '18px', accentColor: '#dc2626' }}
+              />
+              <span style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--primary-navy)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Heart size={16} color="#dc2626" /> Register as a Volunteer Donor now
+              </span>
+            </label>
+            <p style={{ fontSize: '0.75rem', color: '#64748b', margin: '4px 0 0 28px' }}>
+              (Optional: You can also set this up anytime from your Donor Dashboard after approval)
+            </p>
 
-              <div className="form-group">
-                <label className="form-label">Blood Group <span className="required">*</span></label>
-                <select
-                  className="form-select"
-                  value={bloodGroup}
-                  onChange={(e) => setBloodGroup(e.target.value)}
-                  required
+            {includeDonorProfile && (
+              <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #e2e8f0' }}>
+                <div className="form-group">
+                  <label className="form-label">Blood Group <span className="required">*</span></label>
+                  <select
+                    className="form-select"
+                    value={bloodGroup}
+                    onChange={(e) => setBloodGroup(e.target.value)}
+                    required={includeDonorProfile}
+                  >
+                    {BLOOD_GROUPS.map((bg) => (
+                      <option key={bg.value} value={bg.value}>{bg.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">City / Region <span className="required">*</span></label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    placeholder="e.g., Hyderabad"
+                    required={includeDonorProfile}
+                  />
+                </div>
+
+                <div className="grid-2">
+                  <div className="form-group">
+                    <label className="form-label">Latitude</label>
+                    <input
+                      type="number"
+                      step="any"
+                      className="form-input"
+                      value={latitude}
+                      onChange={(e) => setLatitude(e.target.value)}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Longitude</label>
+                    <input
+                      type="number"
+                      step="any"
+                      className="form-input"
+                      value={longitude}
+                      onChange={(e) => setLongitude(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={handleGetLocation}
+                  style={{ width: '100%', marginTop: '4px', fontSize: '0.8rem' }}
                 >
-                  {BLOOD_GROUPS.map((bg) => (
-                    <option key={bg.value} value={bg.value}>{bg.label}</option>
-                  ))}
-                </select>
+                  <MapPin size={14} /> Detect Current GPS Location
+                </button>
               </div>
-
-              <div className="form-group">
-                <label className="form-label">City / Region <span className="required">*</span></label>
-                <input
-                  type="text"
-                  className="form-input"
-                  value={city}
-                  onChange={(e) => setCity(e.target.value)}
-                  placeholder="e.g., Hyderabad"
-                  required
-                />
-              </div>
-
-              <div className="grid-2">
-                <div className="form-group">
-                  <label className="form-label">Latitude</label>
-                  <input
-                    type="number"
-                    step="any"
-                    className="form-input"
-                    value={latitude}
-                    onChange={(e) => setLatitude(e.target.value)}
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Longitude</label>
-                  <input
-                    type="number"
-                    step="any"
-                    className="form-input"
-                    value={longitude}
-                    onChange={(e) => setLongitude(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <button
-                type="button"
-                className="btn btn-secondary btn-sm"
-                onClick={handleGetLocation}
-                style={{ width: '100%', marginTop: '4px', fontSize: '0.8rem' }}
-              >
-                <MapPin size={14} /> Detect Current GPS Location
-              </button>
-            </div>
-          )}
+            )}
+          </div>
 
           <button
             type="submit"
@@ -244,7 +267,7 @@ const RegisterPage = () => {
             style={{ width: '100%', marginTop: '1rem', padding: '12px' }}
             disabled={loading}
           >
-            {loading ? 'Registering Account...' : 'Complete Registration'} <ArrowRight size={16} />
+            {loading ? 'Submitting Registration...' : 'Submit Registration'} <ArrowRight size={16} />
           </button>
         </form>
 

@@ -1,6 +1,7 @@
 package com.bloodlink.bloodlinkbackend.repository;
 
 import com.bloodlink.bloodlinkbackend.entity.User;
+import com.bloodlink.bloodlinkbackend.enums.ApprovalStatus;
 import com.bloodlink.bloodlinkbackend.enums.Role;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
@@ -17,7 +18,11 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     List<User> findByRole(Role role);
 
+    List<User> findByApprovalStatusOrderByCreatedAtDesc(ApprovalStatus approvalStatus);
+
     long countByRole(Role role);
 
     long countByActive(boolean active);
+
+    long countByApprovalStatus(ApprovalStatus approvalStatus);
 }

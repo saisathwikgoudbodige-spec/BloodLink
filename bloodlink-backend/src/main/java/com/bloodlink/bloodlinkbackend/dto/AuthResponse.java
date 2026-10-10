@@ -17,4 +17,6 @@ public class AuthResponse {
     private String type = "Bearer";
 
     private UserDto user;
+
+    private String message;
 }

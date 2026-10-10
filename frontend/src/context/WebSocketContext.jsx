@@ -61,20 +61,22 @@ export const WebSocketProvider = ({ children }) => {
 
     const wsUrl = import.meta.env.VITE_WS_URL || 'http://localhost:8080/ws';
 
+    const storedToken = localStorage.getItem('bloodlink_token');
+
     const client = new Client({
       webSocketFactory: () => new SockJS(wsUrl),
+      connectHeaders: storedToken ? { Authorization: `Bearer ${storedToken}` } : {},
       reconnectDelay: 5000,
       heartbeatIncoming: 4000,
       heartbeatOutgoing: 4000,
       debug: (str) => {
-        // Enable in dev if needed
         // console.log('[STOMP]', str);
       },
       onConnect: () => {
         setConnected(true);
         console.log('Connected to BloodLink WebSocket Server');
 
-        // 1. Subscribe to user-specific channel
+        // 1. Subscribe to recipient-specific notifications channel
         client.subscribe(`/topic/user.${user.id}.notifications`, (message) => {
           try {
             const data = JSON.parse(message.body);
@@ -86,18 +88,20 @@ export const WebSocketProvider = ({ children }) => {
           }
         });
 
-        // 2. Subscribe to general broadcast notifications channel
-        client.subscribe('/topic/notifications', (message) => {
-          try {
-            const data = JSON.parse(message.body);
-            // Only trigger toast if not for this specific user (to avoid duplicate toast)
-            if (data.userId !== user.id) {
-              // optional background metric
+        // 2. If authenticated as ADMIN, subscribe to dedicated administrative notification feed
+        if (user.role === 'ADMIN') {
+          client.subscribe('/topic/admin.notifications', (message) => {
+            try {
+              const data = JSON.parse(message.body);
+              // Avoid duplicate if sent both to admin's user channel and admin topic
+              setLatestNotification(data);
+              setUnreadCount((c) => c + 1);
+              addToast(data);
+            } catch (e) {
+              console.error('Error parsing admin broadcast notification', e);
             }
-          } catch (e) {
-            console.error('Error parsing broadcast notification', e);
-          }
-        });
+          });
+        }
       },
       onDisconnect: () => {
         setConnected(false);
