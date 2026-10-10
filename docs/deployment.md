@@ -69,7 +69,7 @@ Before any deployment, rotate the Neon database password:
    | `JWT_EXPIRATION` | `86400000` (24 hours in ms) |
    | `CORS_ORIGINS` | `https://your-bloodlink.vercel.app` (add after Vercel deployment) |
    | `MATCHING_RADIUS_KM` | `50.0` |
-   | `SEED_DEMO_DATA` | `true` for first run; consider `false` after demo accounts are seeded |
+   | `SEED_DEMO_DATA` | `false` (recommended for production; set to `true` only if initial demo account seeding is needed) |
 
 5. Click **Create Web Service**.
 6. Monitor build logs. First build takes ~5 minutes (Maven compiles in Docker).

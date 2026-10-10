@@ -86,9 +86,9 @@ BLOODLINK/
 Copy `.env.example` to `.env` in the root and configure your Neon PostgreSQL credentials:
 ```bash
 # Neon PostgreSQL Database Credentials
-DATABASE_URL=jdbc:postgresql://<neon-host>:5432/<database-name>?sslmode=require
-DATABASE_USERNAME=<neon-username>
-DATABASE_PASSWORD=<neon-password>
+SPRING_DATASOURCE_URL=jdbc:postgresql://<neon-host>:5432/<database-name>?sslmode=require
+SPRING_DATASOURCE_USERNAME=<neon-username>
+SPRING_DATASOURCE_PASSWORD=<neon-password>
 
 # JWT Security
 JWT_SECRET=<generate-a-random-64-character-hex-string-for-production>
@@ -96,6 +96,9 @@ JWT_EXPIRATION=86400000
 
 # Client Configuration
 CORS_ORIGINS=http://localhost:5173,http://localhost:3000
+
+# Production Demo Data Seeding (false for production)
+SEED_DEMO_DATA=false
 ```
 
 ### B. Running the Backend (Spring Boot)

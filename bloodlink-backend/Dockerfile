@@ -19,7 +19,4 @@ COPY --from=builder /app/target/*.jar app.jar
 ENV PORT=8080
 EXPOSE 8080
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
-  CMD wget --quiet --tries=1 --spider http://localhost:${PORT}/api/auth/login || exit 0
-
 ENTRYPOINT ["java", "-Djava.security.egd=file:/dev/./urandom", "-jar", "app.jar"]
