@@ -11,7 +11,22 @@ public class EntityMapper {
 
         DonorProfileDto donorProfileDto = null;
         if (user.getDonorProfile() != null) {
-            donorProfileDto = toDonorProfileDto(user.getDonorProfile());
+            try {
+                donorProfileDto = toDonorProfileDto(user.getDonorProfile());
+            } catch (Exception ex) {
+                // Safe fallback if proxy cannot be initialized (e.g. detached state or closed session)
+                donorProfileDto = null;
+            }
+        }
+
+        String approvedByEmail = null;
+        if (user.getApprovedBy() != null) {
+            try {
+                approvedByEmail = user.getApprovedBy().getEmail();
+            } catch (Exception ex) {
+                // Safe fallback if proxy cannot be initialized (e.g. detached state or closed session)
+                approvedByEmail = null;
+            }
         }
 
         return UserDto.builder()
@@ -24,7 +39,7 @@ public class EntityMapper {
                 .approvalStatus(user.getApprovalStatus())
                 .rejectionReason(user.getRejectionReason())
                 .approvedAt(user.getApprovedAt())
-                .approvedByEmail(user.getApprovedBy() != null ? user.getApprovedBy().getEmail() : null)
+                .approvedByEmail(approvedByEmail)
                 .createdAt(user.getCreatedAt())
                 .donorProfile(donorProfileDto)
                 .build();
@@ -33,12 +48,31 @@ public class EntityMapper {
     public static DonorProfileDto toDonorProfileDto(DonorProfile profile) {
         if (profile == null) return null;
 
+        Long userId = null;
+        String name = null;
+        String email = null;
+        String phone = null;
+
+        if (profile.getUser() != null) {
+            try {
+                userId = profile.getUser().getId();
+                name = profile.getUser().getName();
+                email = profile.getUser().getEmail();
+                phone = profile.getUser().getPhone();
+            } catch (Exception ex) {
+                try {
+                    userId = profile.getUser().getId();
+                } catch (Exception ignored) {
+                }
+            }
+        }
+
         return DonorProfileDto.builder()
                 .id(profile.getId())
-                .userId(profile.getUser() != null ? profile.getUser().getId() : null)
-                .name(profile.getUser() != null ? profile.getUser().getName() : null)
-                .email(profile.getUser() != null ? profile.getUser().getEmail() : null)
-                .phone(profile.getUser() != null ? profile.getUser().getPhone() : null)
+                .userId(userId)
+                .name(name)
+                .email(email)
+                .phone(phone)
                 .bloodGroup(profile.getBloodGroup())
                 .bloodGroupLabel(profile.getBloodGroup() != null ? profile.getBloodGroup().getLabel() : null)
                 .city(profile.getCity())

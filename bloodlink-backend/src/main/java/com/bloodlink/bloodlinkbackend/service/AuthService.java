@@ -111,6 +111,7 @@ public class AuthService {
                 .build();
     }
 
+    @Transactional(readOnly = true)
     public AuthResponse login(LoginRequest request) {
         String email = request.getEmail().trim().toLowerCase();
 
@@ -138,10 +139,13 @@ public class AuthService {
         UserDetails userDetails = userDetailsService.loadUserByUsername(email);
         String token = jwtService.generateToken(userDetails);
 
+        // Map safely while the persistence context is active
+        UserDto userDto = EntityMapper.toUserDto(user);
+
         return AuthResponse.builder()
                 .token(token)
                 .type("Bearer")
-                .user(EntityMapper.toUserDto(user))
+                .user(userDto)
                 .message("Login successful")
                 .build();
     }

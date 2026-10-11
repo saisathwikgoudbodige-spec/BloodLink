@@ -163,6 +163,130 @@ class AuthServiceTest {
     }
 
     @Test
+    @DisplayName("Approved user login safely handles approvedBy admin email mapping")
+    void testLoginApprovedUserWithApprovedByAdmin() {
+        LoginRequest loginRequest = new LoginRequest("approved.user@test.local", "Password123!");
+        User adminApprover = User.builder()
+                .id(1L)
+                .email("admin@bloodlink.local")
+                .role(Role.ADMIN)
+                .build();
+
+        User approvedUser = User.builder()
+                .id(4L)
+                .email("approved.user@test.local")
+                .active(true)
+                .role(Role.USER)
+                .approvalStatus(ApprovalStatus.APPROVED)
+                .approvedBy(adminApprover)
+                .build();
+
+        when(userRepository.findByEmail("approved.user@test.local")).thenReturn(Optional.of(approvedUser));
+        UserDetails mockUserDetails = mock(UserDetails.class);
+        when(userDetailsService.loadUserByUsername("approved.user@test.local")).thenReturn(mockUserDetails);
+        when(jwtService.generateToken(mockUserDetails)).thenReturn("token.with.admin.approver");
+
+        AuthResponse response = authService.login(loginRequest);
+
+        assertNotNull(response);
+        assertEquals("admin@bloodlink.local", response.getUser().getApprovedByEmail());
+        assertEquals(Role.USER, response.getUser().getRole());
+    }
+
+    @Test
+    @DisplayName("Approved user login safely survives LazyInitializationException on detached User#1 proxy")
+    void testLoginApprovedUserWithLazyProxyNoSessionExceptionHandledSafely() {
+        LoginRequest loginRequest = new LoginRequest("lazy.proxy@test.local", "Password123!");
+
+        // Simulate Hibernate proxy for User#1 throwing LazyInitializationException outside session
+        User lazyAdminProxy = mock(User.class);
+        when(lazyAdminProxy.getEmail())
+                .thenThrow(new org.hibernate.LazyInitializationException("Could not initialize proxy [com.bloodlink.bloodlinkbackend.entity.User#1] - no session"));
+
+        User approvedUser = User.builder()
+                .id(5L)
+                .email("lazy.proxy@test.local")
+                .active(true)
+                .role(Role.USER)
+                .approvalStatus(ApprovalStatus.APPROVED)
+                .approvedBy(lazyAdminProxy)
+                .build();
+
+        when(userRepository.findByEmail("lazy.proxy@test.local")).thenReturn(Optional.of(approvedUser));
+        UserDetails mockUserDetails = mock(UserDetails.class);
+        when(userDetailsService.loadUserByUsername("lazy.proxy@test.local")).thenReturn(mockUserDetails);
+        when(jwtService.generateToken(mockUserDetails)).thenReturn("token.with.lazy.proxy");
+
+        // Must succeed without throwing LazyInitializationException or crashing the login API
+        AuthResponse response = authService.login(loginRequest);
+
+        assertNotNull(response);
+        assertEquals("token.with.lazy.proxy", response.getToken());
+        assertNull(response.getUser().getApprovedByEmail());
+        assertEquals("lazy.proxy@test.local", response.getUser().getEmail());
+    }
+
+    @Test
+    @DisplayName("Approved user login safely maps DonorProfile when present")
+    void testLoginApprovedUserWithDonorProfile() {
+        LoginRequest loginRequest = new LoginRequest("donor.member@test.local", "Password123!");
+
+        com.bloodlink.bloodlinkbackend.entity.DonorProfile profile = com.bloodlink.bloodlinkbackend.entity.DonorProfile.builder()
+                .id(20L)
+                .bloodGroup(BloodGroup.O_POSITIVE)
+                .city("Hyderabad")
+                .latitude(17.3850)
+                .longitude(78.4867)
+                .availabilityStatus(com.bloodlink.bloodlinkbackend.enums.AvailabilityStatus.AVAILABLE)
+                .build();
+
+        User approvedUser = User.builder()
+                .id(6L)
+                .email("donor.member@test.local")
+                .active(true)
+                .role(Role.USER)
+                .approvalStatus(ApprovalStatus.APPROVED)
+                .donorProfile(profile)
+                .build();
+
+        when(userRepository.findByEmail("donor.member@test.local")).thenReturn(Optional.of(approvedUser));
+        UserDetails mockUserDetails = mock(UserDetails.class);
+        when(userDetailsService.loadUserByUsername("donor.member@test.local")).thenReturn(mockUserDetails);
+        when(jwtService.generateToken(mockUserDetails)).thenReturn("token.donor.member");
+
+        AuthResponse response = authService.login(loginRequest);
+
+        assertNotNull(response);
+        assertNotNull(response.getUser().getDonorProfile());
+        assertEquals(BloodGroup.O_POSITIVE, response.getUser().getDonorProfile().getBloodGroup());
+        assertEquals("Hyderabad", response.getUser().getDonorProfile().getCity());
+    }
+
+    @Test
+    @DisplayName("Admin user logs in successfully with ROLE_ADMIN")
+    void testLoginAdminUserSuccess() {
+        LoginRequest loginRequest = new LoginRequest("admin@bloodlink.local", "Admin123!");
+        User adminUser = User.builder()
+                .id(1L)
+                .email("admin@bloodlink.local")
+                .active(true)
+                .role(Role.ADMIN)
+                .approvalStatus(ApprovalStatus.APPROVED)
+                .build();
+
+        when(userRepository.findByEmail("admin@bloodlink.local")).thenReturn(Optional.of(adminUser));
+        UserDetails mockUserDetails = mock(UserDetails.class);
+        when(userDetailsService.loadUserByUsername("admin@bloodlink.local")).thenReturn(mockUserDetails);
+        when(jwtService.generateToken(mockUserDetails)).thenReturn("admin.jwt.token");
+
+        AuthResponse response = authService.login(loginRequest);
+
+        assertNotNull(response);
+        assertEquals(Role.ADMIN, response.getUser().getRole());
+        assertEquals("admin.jwt.token", response.getToken());
+    }
+
+    @Test
     @DisplayName("Registering donor without blood group throws BadRequestException")
     void testRegisterDonorWithoutBloodGroup() {
         RegisterRequest request = RegisterRequest.builder()
